@@ -27,7 +27,7 @@
 
 
 // Filename - App.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import { textCategories, timeModes } from './textSamples';
 import { terminalThemes } from './terminalThemes';
@@ -48,8 +48,9 @@ function App() {
   const [showSummary, setShowSummary] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState('');
+  const [finalScore, setFinalScore] = useState(null);
   const [leaderboard, setLeaderboard] = useState(() => {
-    const saved = localStorage.getItem('typingLeaderboard');
+    const saved = localStorage.getItem('leaderboard');
     return saved ? JSON.parse(saved) : [];
   });
   const timerRef = useRef(null);
@@ -57,7 +58,7 @@ function App() {
 
   // Save leaderboard to localStorage when it changes
   useEffect(() => {
-    localStorage.setItem('typingLeaderboard', JSON.stringify(leaderboard));
+    localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
   }, [leaderboard]);
 
   // System theme detection
@@ -74,18 +75,23 @@ function App() {
     return () => mediaQuery.removeEventListener('change', handleThemeChange);
   }, []);
 
-  const getRandomText = () => {
+  const getRandomText = useCallback(() => {
     if (useCustomText && customText.trim()) {
       return customText.trim();
     }
     const texts = textCategories[selectedType][selectedCategory];
     const randomIndex = Math.floor(Math.random() * texts.length);
     return texts[randomIndex];
-  };
+  }, [selectedType, selectedCategory, useCustomText, customText]);
+
+  // Only update text when explicitly requested
+  const updateText = useCallback(() => {
+    setCurrentText(getRandomText());
+  }, [getRandomText]);
 
   useEffect(() => {
-    setCurrentText(getRandomText());
-  }, [selectedCategory, selectedType, useCustomText, customText, getRandomText]);
+    updateText();
+  }, [updateText]);
 
   useEffect(() => {
     if (isRunning) {
@@ -111,25 +117,30 @@ function App() {
   const handleTestComplete = () => {
     setIsRunning(false);
     setShowSummary(true);
-    setShowNameInput(true);
+    const finalWpm = wpm;
+    const finalAccuracy = accuracy;
+    setFinalScore({ wpm: finalWpm, accuracy: finalAccuracy, time: time });
   };
 
   const handleNameSubmit = () => {
     if (playerName.trim()) {
-      const newEntry = {
-        name: playerName.trim(),
-        wpm,
-        accuracy,
-        time,
-        date: new Date().toISOString(),
-        category: useCustomText ? 'Custom' : selectedCategory,
-        type: useCustomText ? 'Custom' : selectedType
+      const newScore = {
+        name: playerName,
+        wpm: finalScore.wpm,
+        accuracy: finalScore.accuracy,
+        time: finalScore.time,
+        date: new Date().toLocaleDateString(),
+        category: selectedCategory,
+        type: selectedType
       };
       setLeaderboard(prev => {
-        const updated = [...prev, newEntry].sort((a, b) => b.wpm - a.wpm).slice(0, 10);
-        return updated;
+        const newLeaderboard = [...prev, newScore]
+          .sort((a, b) => b.wpm - a.wpm)
+          .slice(0, 10);
+        return newLeaderboard;
       });
       setShowNameInput(false);
+      handleReset();
     }
   };
 
@@ -171,7 +182,8 @@ function App() {
     setShowSummary(false);
     setShowNameInput(false);
     setPlayerName('');
-    setCurrentText(getRandomText());
+    setFinalScore(null);
+    updateText();
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -179,7 +191,32 @@ function App() {
 
   const handleTimeModeChange = (e) => {
     setTimeMode(e.target.value);
-    handleReset();
+    setUserInput(''); // Clear input when changing time mode
+    setTime(0);
+    setIsRunning(false);
+    setWpm(0);
+    setAccuracy(100);
+    updateText();
+  };
+
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
+    setUserInput(''); // Clear input when changing category
+    setTime(0);
+    setIsRunning(false);
+    setWpm(0);
+    setAccuracy(100);
+    updateText();
+  };
+
+  const handleTypeChange = (e) => {
+    setSelectedType(e.target.value);
+    setUserInput(''); // Clear input when changing type
+    setTime(0);
+    setIsRunning(false);
+    setWpm(0);
+    setAccuracy(100);
+    updateText();
   };
 
   const handleThemeChange = (e) => {
@@ -197,26 +234,61 @@ function App() {
     setUseCustomText(e.target.checked);
     if (!e.target.checked) {
       setCustomText('');
+      updateText();
     }
   };
 
   const selectedTheme = terminalThemes[theme];
 
+  // Add easter egg functions
+  const handleCloseClick = () => {
+    const messages = [
+      "Are you sure you want to close? Your progress will be lost!",
+      "Don't close me! I'm having fun!",
+      "You can't close me! I'm a React app!",
+      "Nice try, but I'm not going anywhere!",
+      "Closing is not an option in the world of typing tests!"
+    ];
+    alert(messages[Math.floor(Math.random() * messages.length)]);
+  };
+
+  const handleMinimizeClick = () => {
+    const messages = [
+      "I'm already as small as I can be!",
+      "Minimizing a web app? That's a new one!",
+      "You can't minimize me, I'm not a real window!",
+      "I'm already running in your browser tab!",
+      "Try using your browser's minimize button instead!"
+    ];
+    alert(messages[Math.floor(Math.random() * messages.length)]);
+  };
+
+  const handleMaximizeClick = () => {
+    const messages = [
+      "I'm already at maximum typing power!",
+      "Maximum typing speed achieved!",
+      "You've unlocked the secret typing dimension!",
+      "The terminal is now at maximum capacity!",
+      "Be careful, too much typing power might break the internet!"
+    ];
+    alert(messages[Math.floor(Math.random() * messages.length)]);
+  };
+
   const renderSummary = () => (
     <div className="summary-screen">
       <h2>Test Complete!</h2>
       <div className="summary-stats">
-        <div className="summary-stat">
-          <div>WPM</div>
-          <div>{wpm}</div>
+        <div className="stat">
+          <span className="stat-label">WPM</span>
+          <span className="stat-value">{finalScore.wpm}</span>
         </div>
-        <div className="summary-stat">
-          <div>Accuracy</div>
-          <div>{accuracy}%</div>
+        <div className="stat">
+          <span className="stat-label">Accuracy</span>
+          <span className="stat-value">{finalScore.accuracy}%</span>
         </div>
-        <div className="summary-stat">
-          <div>Time</div>
-          <div>{time}s</div>
+        <div className="stat">
+          <span className="stat-label">Time</span>
+          <span className="stat-value">{finalScore.time}s</span>
         </div>
       </div>
       {showNameInput ? (
@@ -227,17 +299,13 @@ function App() {
             onChange={(e) => setPlayerName(e.target.value)}
             placeholder="Enter your name"
             maxLength={20}
-            autoFocus
           />
-          <button className="submit-button" onClick={handleNameSubmit}>
-            Save Score
-          </button>
+          <button onClick={handleNameSubmit}>Save Score</button>
         </div>
       ) : (
-        <button className="reset-button" onClick={handleReset}>
-          Try Again
-        </button>
+        <button onClick={() => setShowNameInput(true)}>Save Score</button>
       )}
+      <button onClick={handleReset}>Try Again</button>
     </div>
   );
 
@@ -271,11 +339,11 @@ function App() {
     }}>
       <div className="terminal-header">
         <div className="terminal-controls">
-          <div className="terminal-control close"></div>
-          <div className="terminal-control minimize"></div>
-          <div className="terminal-control maximize"></div>
+          <div className="terminal-control close" onClick={handleCloseClick}></div>
+          <div className="terminal-control minimize" onClick={handleMinimizeClick}></div>
+          <div className="terminal-control maximize" onClick={handleMaximizeClick}></div>
         </div>
-        <div className="terminal-title">Typing Test</div>
+        <div className="terminal-title">Hyperwebster: Inf-Typer</div>
       </div>
 
       <div className="container">
@@ -284,7 +352,7 @@ function App() {
             <label>Category:</label>
             <select 
               value={selectedCategory} 
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={handleCategoryChange}
               disabled={useCustomText}
               className={useCustomText ? 'disabled' : ''}
             >
@@ -298,7 +366,7 @@ function App() {
             <label>Length:</label>
             <select 
               value={selectedType} 
-              onChange={(e) => setSelectedType(e.target.value)}
+              onChange={handleTypeChange}
               disabled={useCustomText}
               className={useCustomText ? 'disabled' : ''}
             >

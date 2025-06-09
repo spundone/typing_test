@@ -1,70 +1,120 @@
-# Getting Started with Create React App
+# Hyperwebster: Inf-Typer
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern, terminal-themed typing test application built with React. Test your typing speed and accuracy with various text samples from Shakespeare, One Piece, and Aesop's fables.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Terminal-inspired UI with light/dark theme support
+- Multiple text categories (Shakespeare, One Piece, Aesop's fables)
+- Different time modes (30s, 60s, 90s, and complete text)
+- Real-time WPM and accuracy tracking
+- Custom text input option
+- Leaderboard with persistent storage
+- Mobile-responsive design
+- Fun easter eggs in the terminal controls
 
-### `npm start`
+## Live Demo
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+[Add your deployed site URL here]
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Getting Started
 
-### `npm test`
+### Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js (v14 or higher)
+- npm or yarn
 
-### `npm run build`
+### Installation
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/hyperwebster-typer.git
+cd hyperwebster-typer
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. Start the development server:
+```bash
+npm start
+# or
+yarn start
+```
 
-### `npm run eject`
+4. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Building for Production
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+To create a production build:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm run build
+# or
+yarn build
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+The build artifacts will be stored in the `build/` directory.
 
-## Learn More
+## Deployment
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+This project can be easily deployed to various platforms:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### GitHub Pages
 
-### Code Splitting
+1. Add `homepage` field to `package.json`:
+```json
+{
+  "homepage": "https://yourusername.github.io/hyperwebster-typer"
+}
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+2. Install gh-pages:
+```bash
+npm install --save-dev gh-pages
+```
 
-### Analyzing the Bundle Size
+3. Add deployment scripts to `package.json`:
+```json
+{
+  "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  }
+}
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+4. Deploy:
+```bash
+npm run deploy
+```
 
-### Making a Progressive Web App
+### Netlify
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+1. Create a `netlify.toml` file in the root directory:
+```toml
+[build]
+  command = "npm run build"
+  publish = "build"
+```
 
-### Advanced Configuration
+2. Connect your repository to Netlify and deploy.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Contributing
 
-### Deployment
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## License
 
-### `npm run build` fails to minify
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Acknowledgments
+
+- React team for the amazing framework
+- One Piece for the inspiring quotes
+- Shakespeare for the timeless words
+- Aesop for the classic fables
