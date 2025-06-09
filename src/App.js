@@ -59,17 +59,19 @@ const App = () => {
   });
   const [theme, setTheme] = useState('dark');
   const inputRef = useRef(null);
+  const startTimeRef = useRef(null);
+  const [pendingScore, setPendingScore] = useState(null);
 
-  // Calculate WPM based on time remaining
-  const calculateWPM = useCallback((text, input, timeInSeconds) => {
-    if (!text || !input || timeInSeconds <= 0) return 0;
+  // Calculate WPM based on elapsed time
+  const calculateWPM = useCallback((text, input, elapsedTime) => {
+    if (!text || !input || elapsedTime <= 0) return 0;
     
     const words = text.trim().split(/\s+/).length;
-    const timeInMinutes = (parseInt(selectedType) - timeInSeconds) / 60;
+    const timeInMinutes = elapsedTime / 60;
     const wpm = Math.round((words / timeInMinutes) * (input.length / text.length));
     
     return isFinite(wpm) ? wpm : 0;
-  }, [selectedType]);
+  }, []);
 
   const calculateAccuracy = useCallback((text, input) => {
     if (!text || !input) return 100;
@@ -83,6 +85,91 @@ const App = () => {
     
     return Math.round((correct / input.length) * 100);
   }, []);
+
+  // Handle test completion
+  const handleTestComplete = useCallback(() => {
+    setIsRunning(false);
+    setShowSummary(true);
+    setShowNameInput(true);
+    
+    // Calculate final stats
+    const elapsedTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+    const finalWpm = calculateWPM(currentText, userInput, elapsedTime);
+    const finalAccuracy = calculateAccuracy(currentText, userInput);
+    
+    // Store the score temporarily
+    const newScore = {
+      wpm: finalWpm,
+      accuracy: finalAccuracy,
+      time: elapsedTime,
+      date: new Date().toLocaleDateString(),
+      category: selectedCategory,
+      type: selectedType
+    };
+    
+    // Store the score in state for later use
+    setPendingScore(newScore);
+  }, [currentText, userInput, selectedCategory, selectedType, calculateWPM, calculateAccuracy]);
+
+  // Core timer logic
+  useEffect(() => {
+    let timerInterval;
+    
+    if (isRunning) {
+      const initialTime = parseInt(selectedType);
+      
+      timerInterval = setInterval(() => {
+        const elapsedTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const remainingTime = Math.max(0, initialTime - elapsedTime);
+        
+        setTime(remainingTime);
+        
+        if (remainingTime <= 0) {
+          handleTestComplete();
+        }
+      }, 100); // Update more frequently for smoother countdown
+    }
+
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [isRunning, selectedType, handleTestComplete]);
+
+  // Handle input changes and test progress
+  const handleInputChange = useCallback((e) => {
+    const newInput = e.target.value;
+    setUserInput(newInput);
+
+    // Start timer on first keystroke
+    if (newInput.length === 1 && !isRunning) {
+      startTimeRef.current = Date.now();
+      setIsRunning(true);
+    }
+
+    // Reset stats if input is cleared
+    if (newInput.length === 0) {
+      setTime(parseInt(selectedType));
+      setWpm(0);
+      setAccuracy(100);
+      setIsRunning(false);
+      startTimeRef.current = null;
+      return;
+    }
+
+    // Calculate current stats
+    const elapsedTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+    const currentWpm = calculateWPM(currentText, newInput, elapsedTime);
+    const currentAccuracy = calculateAccuracy(currentText, newInput);
+    setWpm(currentWpm);
+    setAccuracy(currentAccuracy);
+
+    // Check for test completion
+    if (newInput === currentText) {
+      handleTestComplete();
+    }
+  }, [isRunning, currentText, selectedType, handleTestComplete, calculateWPM, calculateAccuracy]);
 
   // Save leaderboard to localStorage
   useEffect(() => {
@@ -118,154 +205,6 @@ const App = () => {
     const newText = getRandomText();
     setCurrentText(newText);
   }, [getRandomText]);
-
-  // Handle test reset
-  const handleReset = useCallback(() => {
-    setUserInput('');
-    setTime(parseInt(selectedType));
-    setIsRunning(false);
-    setWpm(0);
-    setAccuracy(100);
-    setShowSummary(false);
-    setShowNameInput(false);
-    setPlayerName('');
-    updateText();
-  }, [selectedType, updateText]);
-
-  // Handle test completion
-  const handleTestComplete = useCallback(() => {
-    setIsRunning(false);
-    setShowSummary(true);
-    setShowNameInput(true);
-    
-    // Calculate final stats
-    const finalWpm = calculateWPM(currentText, userInput, time);
-    const finalAccuracy = calculateAccuracy(currentText, userInput);
-    
-    // Update leaderboard
-    const newScore = {
-      wpm: finalWpm,
-      accuracy: finalAccuracy,
-      time: time,
-      date: new Date().toLocaleDateString(),
-      category: selectedCategory,
-      type: selectedType,
-      name: playerName || 'Anonymous'
-    };
-    
-    setLeaderboard(prev => {
-      const newLeaderboard = [...prev, newScore]
-        .sort((a, b) => b.wpm - a.wpm)
-        .slice(0, 10);
-      return newLeaderboard;
-    });
-  }, [currentText, userInput, time, selectedCategory, selectedType, playerName, calculateWPM, calculateAccuracy]);
-
-  // Handle name submission
-  const handleNameSubmit = useCallback(() => {
-    if (playerName.trim()) {
-      setShowNameInput(false);
-      handleReset();
-    }
-  }, [playerName, handleReset]);
-
-  // Core timer logic
-  useEffect(() => {
-    let timerInterval;
-    
-    if (isRunning) {
-      timerInterval = setInterval(() => {
-        setTime(prevTime => {
-          const newTime = prevTime - 1;
-          
-          if (newTime <= 0) {
-            handleTestComplete();
-            return 0;
-          }
-          
-          return newTime;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
-    };
-  }, [isRunning, handleTestComplete]);
-
-  // Handle input changes and test progress
-  const handleInputChange = useCallback((e) => {
-    const newInput = e.target.value;
-    setUserInput(newInput);
-
-    // Start timer on first keystroke
-    if (newInput.length === 1 && !isRunning) {
-      setIsRunning(true);
-    }
-
-    // Reset stats if input is cleared
-    if (newInput.length === 0) {
-      setTime(parseInt(selectedType));
-      setWpm(0);
-      setAccuracy(100);
-      setIsRunning(false);
-      return;
-    }
-
-    // Calculate current stats
-    const currentWpm = calculateWPM(currentText, newInput, time);
-    const currentAccuracy = calculateAccuracy(currentText, newInput);
-    setWpm(currentWpm);
-    setAccuracy(currentAccuracy);
-
-    // Check for test completion
-    if (newInput === currentText) {
-      handleTestComplete();
-    }
-  }, [isRunning, currentText, time, selectedType, handleTestComplete, calculateWPM, calculateAccuracy]);
-
-  // Handle mode changes
-  const handleModeChange = useCallback((type) => {
-    setSelectedType(type);
-    setTime(parseInt(type));
-    setIsRunning(false);
-    setUserInput('');
-    setWpm(0);
-    setAccuracy(100);
-    setShowSummary(false);
-    setShowNameInput(false);
-    setPlayerName('');
-    updateText();
-  }, [updateText]);
-
-  const handleCategoryChange = useCallback((category) => {
-    setSelectedCategory(category);
-    setTime(parseInt(selectedType));
-    setIsRunning(false);
-    setUserInput('');
-    setWpm(0);
-    setAccuracy(100);
-    setShowSummary(false);
-    setShowNameInput(false);
-    setPlayerName('');
-    updateText();
-  }, [selectedType, updateText]);
-
-  // Handle length change
-  const handleLengthChange = useCallback((length) => {
-    setSelectedLength(length);
-    setTime(parseInt(selectedType));
-    setIsRunning(false);
-    setUserInput('');
-    setWpm(0);
-    setAccuracy(100);
-    setShowSummary(false);
-    setShowNameInput(false);
-    setPlayerName('');
-    updateText();
-  }, [selectedType, updateText]);
 
   // Initial text setup
   useEffect(() => {
@@ -368,6 +307,82 @@ const App = () => {
       )}
     </div>
   );
+
+  // Handle test reset
+  const handleReset = useCallback(() => {
+    setUserInput('');
+    setTime(parseInt(selectedType));
+    setIsRunning(false);
+    setWpm(0);
+    setAccuracy(100);
+    setShowSummary(false);
+    setShowNameInput(false);
+    setPlayerName('');
+    startTimeRef.current = null;
+    updateText();
+  }, [selectedType, updateText]);
+
+  // Handle name submission
+  const handleNameSubmit = useCallback(() => {
+    if (playerName.trim()) {
+      // Add the name to the pending score and update leaderboard
+      const scoreWithName = {
+        ...pendingScore,
+        name: playerName.trim()
+      };
+      
+      setLeaderboard(prev => {
+        const newLeaderboard = [...prev, scoreWithName]
+          .sort((a, b) => b.wpm - a.wpm)
+          .slice(0, 10);
+        return newLeaderboard;
+      });
+      
+      setShowNameInput(false);
+      handleReset();
+    }
+  }, [playerName, pendingScore, handleReset]);
+
+  // Handle mode changes
+  const handleModeChange = useCallback((type) => {
+    setSelectedType(type);
+    setTime(parseInt(type));
+    setIsRunning(false);
+    setUserInput('');
+    setWpm(0);
+    setAccuracy(100);
+    setShowSummary(false);
+    setShowNameInput(false);
+    setPlayerName('');
+    updateText();
+  }, [updateText]);
+
+  const handleCategoryChange = useCallback((category) => {
+    setSelectedCategory(category);
+    setTime(parseInt(selectedType));
+    setIsRunning(false);
+    setUserInput('');
+    setWpm(0);
+    setAccuracy(100);
+    setShowSummary(false);
+    setShowNameInput(false);
+    setPlayerName('');
+    updateText();
+  }, [selectedType, updateText]);
+
+  // Handle length change
+  const handleLengthChange = useCallback((length) => {
+    setSelectedLength(length);
+    setTime(parseInt(selectedType));
+    setIsRunning(false);
+    setUserInput('');
+    setWpm(0);
+    setAccuracy(100);
+    setShowSummary(false);
+    setShowNameInput(false);
+    setPlayerName('');
+    updateText();
+  }, [selectedType, updateText]);
 
   return (
     <div className="App terminal-theme" style={{
