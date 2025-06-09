@@ -440,3 +440,29 @@ textarea:focus {
 .submit-button:hover {
   opacity: 0.9;
 }
+
+.typing-input {
+  width: 100%;
+  padding: 20px;
+  font-size: 1.2em;
+  line-height: 1.6;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 150px;
+  resize: vertical;
+  font-family: inherit;
+  color: var(--text-color);
+  transition: border-color 0.2s ease;
+  margin-top: 20px;
+}
+
+.typing-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.typing-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
