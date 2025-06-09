@@ -57,7 +57,7 @@ const App = () => {
     const saved = localStorage.getItem('leaderboard');
     return saved ? JSON.parse(saved) : [];
   });
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState('Default Dark');
   const inputRef = useRef(null);
   const startTimeRef = useRef(null);
   const [pendingScore, setPendingScore] = useState(null);
