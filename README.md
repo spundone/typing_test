@@ -28,7 +28,7 @@ A modern, terminal-themed typing test application built with React. Test your ty
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/hyperwebster-typer.git
+git clone https://github.com/spundone/hyperwebster-typer.git
 cd hyperwebster-typer
 ```
 
@@ -69,7 +69,7 @@ This project can be easily deployed to various platforms:
 1. Add `homepage` field to `package.json`:
 ```json
 {
-  "homepage": "https://yourusername.github.io/hyperwebster-typer"
+  "homepage": "https://spundone.github.io/hyperwebster-typer"
 }
 ```
 
