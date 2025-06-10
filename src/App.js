@@ -297,7 +297,7 @@ const App = () => {
                 <span>{entry.time || 0}s</span>
               </div>
               <div className="details">
-                {entry.category || 'Custom'} - {entry.type || 'Custom'}
+                {entry.category} - {entry.type}
               </div>
             </div>
           ))}
@@ -327,7 +327,8 @@ const App = () => {
     // Add the name to the pending score and update leaderboard
     const scoreWithName = {
       ...pendingScore,
-      name: playerName.trim() || 'Anonymous'
+      name: playerName.trim() || 'Anonymous',
+      category: useCustomText ? 'Custom Text' : selectedCategory
     };
     
     setLeaderboard(prev => {
@@ -339,7 +340,7 @@ const App = () => {
     
     setShowNameInput(false);
     handleReset();
-  }, [playerName, pendingScore, handleReset]);
+  }, [playerName, pendingScore, handleReset, useCustomText, selectedCategory]);
 
   // Handle mode changes
   const handleModeChange = useCallback((type) => {

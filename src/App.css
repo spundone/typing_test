@@ -185,23 +185,27 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .file-upload-label {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
+  padding: 8px 16px;
   background: var(--accent-color);
   color: var(--background-color);
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.3s ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .file-upload-label:hover {
   opacity: 0.9;
   box-shadow: 0 0 8px var(--accent-color);
+  border-color: var(--background-color);
 }
 
 .file-upload-label input[type="file"] {
@@ -209,7 +213,7 @@
 }
 
 .clear-text-button {
-  padding: 6px 12px;
+  padding: 8px 16px;
   background: var(--header-color);
   color: var(--text-color);
   border: 1px solid var(--border-color);
@@ -217,6 +221,7 @@
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .clear-text-button:hover {
@@ -229,6 +234,7 @@
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+  border-color: var(--border-color);
 }
 
 .custom-text-input {
@@ -756,6 +762,24 @@ button:active {
     width: 100%;
     text-align: center;
     margin: 5px 0;
+  }
+
+  .custom-text-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .custom-text-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .file-upload-label,
+  .clear-text-button {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
   }
 }
 
