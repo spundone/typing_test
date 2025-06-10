@@ -132,6 +132,9 @@
   padding: 12px 15px;
   border-bottom: 1px solid var(--border-color);
   background: var(--background-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .custom-text-header label {
@@ -178,6 +181,56 @@
   box-shadow: 0 0 8px var(--accent-color);
 }
 
+.custom-text-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.file-upload-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--accent-color);
+  color: var(--background-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.file-upload-label:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 8px var(--accent-color);
+}
+
+.file-upload-label input[type="file"] {
+  display: none;
+}
+
+.clear-text-button {
+  padding: 6px 12px;
+  background: var(--header-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.clear-text-button:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-color);
+}
+
+.clear-text-button:disabled,
+.file-upload-label:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .custom-text-input {
   width: 100%;
   padding: 15px;
@@ -187,7 +240,7 @@
   font-family: 'Roboto Mono', monospace;
   font-size: 1.2rem;
   line-height: 1.6;
-  min-height: 100px;
+  min-height: 150px;
   resize: vertical;
   transition: all 0.3s ease;
 }

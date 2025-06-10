@@ -382,6 +382,25 @@ const App = () => {
     updateText();
   }, [selectedType, updateText]);
 
+  const handleFileUpload = useCallback((event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        setCurrentText(text);
+      };
+      reader.readAsText(file);
+    }
+  }, []);
+
+  const handlePaste = useCallback((event) => {
+    const pastedText = event.clipboardData.getData('text');
+    if (pastedText) {
+      setCurrentText(pastedText);
+    }
+  }, []);
+
   return (
     <div className="App terminal-theme" style={{
       '--background-color': selectedTheme?.background || '#1a1a1a',
@@ -463,12 +482,33 @@ const App = () => {
               />
               Use Custom Text
             </label>
+            {useCustomText && (
+              <div className="custom-text-actions">
+                <label className="file-upload-label">
+                  <input
+                    type="file"
+                    accept=".txt,.md,.doc,.docx"
+                    onChange={handleFileUpload}
+                    disabled={isRunning}
+                  />
+                  Upload Document
+                </label>
+                <button 
+                  className="clear-text-button"
+                  onClick={() => setCurrentText('')}
+                  disabled={isRunning}
+                >
+                  Clear Text
+                </button>
+              </div>
+            )}
           </div>
           {useCustomText && (
             <textarea
               value={currentText}
               onChange={(e) => setCurrentText(e.target.value)}
-              placeholder="Enter your custom text here..."
+              onPaste={handlePaste}
+              placeholder="Enter your custom text here or paste from a document..."
               className="custom-text-input"
               disabled={isRunning}
             />
