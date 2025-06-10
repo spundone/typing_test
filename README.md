@@ -15,7 +15,7 @@ A modern, terminal-themed typing test application built with React. Test your ty
 
 ## Live Demo
 
-[Add your deployed site URL here]
+https://hyperwebster-typer.netlify.app/
 
 ## Getting Started
 
