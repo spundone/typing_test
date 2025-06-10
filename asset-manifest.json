@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/static/css/main.d9c9de39.css",
-    "main.js": "/static/js/main.832b887b.js",
-    "static/js/453.f47339d5.chunk.js": "/static/js/453.f47339d5.chunk.js",
-    "index.html": "/index.html",
-    "main.d9c9de39.css.map": "/static/css/main.d9c9de39.css.map",
-    "main.832b887b.js.map": "/static/js/main.832b887b.js.map",
-    "453.f47339d5.chunk.js.map": "/static/js/453.f47339d5.chunk.js.map"
+    "main.css": "/hyperwebster-typer/static/css/main.d9c9de39.css",
+    "main.js": "/hyperwebster-typer/static/js/main.22293e2a.js",
+    "static/js/453.f47339d5.chunk.js": "/hyperwebster-typer/static/js/453.f47339d5.chunk.js",
+    "index.html": "/hyperwebster-typer/index.html",
+    "main.d9c9de39.css.map": "/hyperwebster-typer/static/css/main.d9c9de39.css.map",
+    "main.22293e2a.js.map": "/hyperwebster-typer/static/js/main.22293e2a.js.map",
+    "453.f47339d5.chunk.js.map": "/hyperwebster-typer/static/js/453.f47339d5.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.d9c9de39.css",
-    "static/js/main.832b887b.js"
+    "static/js/main.22293e2a.js"
   ]
 }
