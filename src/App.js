@@ -101,7 +101,7 @@ const App = () => {
     const newScore = {
       wpm: finalWpm,
       accuracy: finalAccuracy,
-      time: elapsedTime,
+      time: parseInt(selectedType),
       date: new Date().toLocaleDateString(),
       category: selectedCategory,
       type: selectedType
@@ -261,7 +261,7 @@ const App = () => {
         </div>
         <div className="stat">
           <span className="stat-label">Time</span>
-          <span className="stat-value">{time}s</span>
+          <span className="stat-value">{selectedType}</span>
         </div>
       </div>
       {showNameInput ? (
