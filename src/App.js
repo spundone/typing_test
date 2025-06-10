@@ -388,8 +388,8 @@ const App = () => {
     <div className="App terminal-theme" style={{
       '--background-color': selectedTheme?.background || '#1a1a1a',
       '--text-color': selectedTheme?.text || '#ffffff',
-      '--accent-color': selectedTheme?.accent || '#00ff00',
-      '--correct-color': selectedTheme?.correct || '#00ff00',
+      '--accent-color': selectedTheme?.accent || '#2563eb',
+      '--correct-color': selectedTheme?.correct || '#2563eb',
       '--incorrect-color': selectedTheme?.incorrect || '#ff0000',
       '--header-color': selectedTheme?.header || '#2a2a2a',
       '--border-color': selectedTheme?.border || '#3a3a3a'

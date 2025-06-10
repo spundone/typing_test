@@ -180,23 +180,26 @@
 }
 
 .text-display {
-  padding: 20px;
-  font-size: 1.2em;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1.2rem;
   line-height: 1.6;
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
+  margin: 20px 0;
+  padding: 20px;
+  background: var(--header-color);
   border-radius: 8px;
+  border: 1px solid var(--border-color);
   min-height: 150px;
   white-space: pre-wrap;
-  font-family: inherit;
   color: var(--text-color);
-  resize: vertical;
   transition: all 0.3s ease;
 }
 
+.text-display:hover {
+  box-shadow: 0 0 8px var(--accent-color);
+}
+
 .text-display span {
-  display: inline;
-  padding: 0 1px;
+  position: relative;
 }
 
 .text-display span.correct {
@@ -205,7 +208,7 @@
 
 .text-display span.incorrect {
   color: var(--incorrect-color);
-  text-decoration: underline;
+  animation: error 0.2s ease-in-out;
 }
 
 textarea {
@@ -257,24 +260,21 @@ textarea:focus {
 
 .reset-button,
 button {
-  background: var(--header-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
+  background: var(--accent-color);
+  color: var(--background-color);
+  border: none;
   padding: 10px 20px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 1em;
   transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 0 8px var(--accent-color);
 }
 
 .reset-button:hover,
 button:hover {
-  background: var(--accent-color);
-  color: var(--background-color);
-  transform: none;
-  box-shadow: 0 4px 12px var(--accent-color);
+  opacity: 0.9;
+  box-shadow: 0 0 12px var(--accent-color);
 }
 
 .reset-button:active,
@@ -368,40 +368,22 @@ button:active {
 
 .leaderboard {
   background: var(--header-color);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   margin-top: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  border: 1px solid var(--border-color);
-  max-height: 400px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent-color) var(--header-color);
 }
 
-.leaderboard::-webkit-scrollbar {
-  width: 8px;
-}
-
-.leaderboard::-webkit-scrollbar-track {
-  background: var(--header-color);
-  border-radius: 4px;
-}
-
-.leaderboard::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
-  border-radius: 4px;
+.leaderboard:hover {
+  box-shadow: 0 0 8px var(--accent-color);
 }
 
 .leaderboard h2 {
-  color: var(--accent-color);
-  text-align: center;
+  color: var(--text-color);
   margin-bottom: 20px;
-  font-size: 1.5em;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+  font-size: 1.5rem;
+  text-align: center;
 }
 
 .leaderboard-entries {
@@ -411,22 +393,44 @@ button:active {
 }
 
 .leaderboard-entry {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 15px;
   display: grid;
   grid-template-columns: auto 1fr auto auto;
-  align-items: center;
   gap: 15px;
+  align-items: center;
   transition: all 0.3s ease;
-  border: 1px solid var(--border-color);
-  animation: fadeIn 0.5s ease-out;
 }
 
 .leaderboard-entry:hover {
-  transform: none;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 8px var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-color);
+  transform: translateY(-2px);
+  background: var(--header-color);
+}
+
+.leaderboard-entry .rank {
+  font-weight: bold;
+  color: var(--accent-color);
+  font-size: 1.2em;
+}
+
+.leaderboard-entry .name {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.leaderboard-entry .score {
+  display: flex;
+  gap: 15px;
+  color: var(--text-color);
+}
+
+.leaderboard-entry .details {
+  color: var(--text-color);
+  opacity: 0.7;
+  font-size: 0.9em;
 }
 
 .rank {
@@ -502,30 +506,29 @@ button:active {
 
 /* Enhance existing elements */
 .text-display:hover {
-  box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+  box-shadow: 0 0 8px var(--accent-color);
 }
 
 .typing-input {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1.2rem;
   width: 100%;
-  padding: 20px;
-  font-size: 1.2em;
-  line-height: 1.6;
-  background-color: var(--background-color);
+  padding: 15px;
+  margin: 20px 0;
+  background: var(--header-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  min-height: 150px;
-  resize: vertical;
-  font-family: inherit;
   color: var(--text-color);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  margin-top: 20px;
+  resize: none;
+  min-height: 100px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 8px var(--accent-color);
 }
 
 .typing-input:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 8px var(--accent-color);
-  transform: none;
+  box-shadow: 0 0 12px var(--accent-color);
 }
 
 .typing-input:disabled {
@@ -713,4 +716,23 @@ button:active {
     flex-direction: column;
     gap: 15px;
   }
+}
+
+/* Remove any remaining green glows */
+.text-display:hover,
+.leaderboard:hover,
+.leaderboard-entry:hover {
+  box-shadow: 0 0 8px var(--accent-color);
+}
+
+/* Ensure all transitions use the accent color */
+.text-display,
+.leaderboard,
+.leaderboard-entry {
+  transition: all 0.3s ease;
+}
+
+/* Remove any remaining green backgrounds */
+.leaderboard-entry:hover {
+  background: var(--header-color);
 }
