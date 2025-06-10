@@ -270,10 +270,10 @@ const App = () => {
             type="text"
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Enter your name"
+            placeholder="Enter your name (optional)"
             maxLength={20}
           />
-          <button onClick={handleNameSubmit}>Submit</button>
+          <button onClick={handleNameSubmit}>Save Score</button>
         </div>
       ) : (
         <button onClick={() => setShowNameInput(true)}>Save Score</button>
@@ -324,23 +324,21 @@ const App = () => {
 
   // Handle name submission
   const handleNameSubmit = useCallback(() => {
-    if (playerName.trim()) {
-      // Add the name to the pending score and update leaderboard
-      const scoreWithName = {
-        ...pendingScore,
-        name: playerName.trim()
-      };
-      
-      setLeaderboard(prev => {
-        const newLeaderboard = [...prev, scoreWithName]
-          .sort((a, b) => b.wpm - a.wpm)
-          .slice(0, 10);
-        return newLeaderboard;
-      });
-      
-      setShowNameInput(false);
-      handleReset();
-    }
+    // Add the name to the pending score and update leaderboard
+    const scoreWithName = {
+      ...pendingScore,
+      name: playerName.trim() || 'Anonymous'
+    };
+    
+    setLeaderboard(prev => {
+      const newLeaderboard = [...prev, scoreWithName]
+        .sort((a, b) => b.wpm - a.wpm)
+        .slice(0, 10);
+      return newLeaderboard;
+    });
+    
+    setShowNameInput(false);
+    handleReset();
   }, [playerName, pendingScore, handleReset]);
 
   // Handle mode changes
@@ -455,24 +453,42 @@ const App = () => {
           </div>
         </div>
 
-        <div className="custom-text-toggle">
-          <label>
-            <input
-              type="checkbox"
-              checked={useCustomText}
-              onChange={(e) => setUseCustomText(e.target.checked)}
+        <div className="custom-text-section">
+          <div className="custom-text-header">
+            <label>
+              <input
+                type="checkbox"
+                checked={useCustomText}
+                onChange={(e) => setUseCustomText(e.target.checked)}
+              />
+              Use Custom Text
+            </label>
+          </div>
+          {useCustomText && (
+            <textarea
+              value={currentText}
+              onChange={(e) => setCurrentText(e.target.value)}
+              placeholder="Enter your custom text here..."
+              className="custom-text-input"
+              disabled={isRunning}
             />
-            Use Custom Text
-          </label>
+          )}
         </div>
 
         {useCustomText ? (
-          <textarea
-            value={currentText}
-            onChange={(e) => setCurrentText(e.target.value)}
-            placeholder="Enter your custom text here..."
-            className="text-display"
-          />
+          <div className="text-display">
+            {currentText.split('').map((char, index) => {
+              let className = '';
+              if (index < userInput.length) {
+                className = userInput[index] === char ? 'correct' : 'incorrect';
+              }
+              return (
+                <span key={index} className={className}>
+                  {char}
+                </span>
+              );
+            })}
+          </div>
         ) : (
           <div className="text-display">
             {currentText.split('').map((char, index) => {
@@ -495,7 +511,7 @@ const App = () => {
             value={userInput}
             onChange={handleInputChange}
             placeholder="Start typing..."
-            disabled={!currentText || useCustomText}
+            disabled={!currentText}
             className="typing-input"
           />
         )}
