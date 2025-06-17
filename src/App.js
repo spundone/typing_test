@@ -72,6 +72,7 @@ const App = () => {
   const [pendingScore, setPendingScore] = useState(null);
   const [isNoLimit, setIsNoLimit] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [accuracyMode, setAccuracyMode] = useState('word'); // 'word' or 'letter'
 
   // Calculate WPM based on elapsed time
   const calculateWPM = useCallback((text, input, elapsedTime) => {
@@ -87,15 +88,38 @@ const App = () => {
   const calculateAccuracy = useCallback((text, input) => {
     if (!text || !input) return 100;
     
-    let correct = 0;
-    const minLength = Math.min(text.length, input.length);
-    
-    for (let i = 0; i < minLength; i++) {
-      if (text[i] === input[i]) correct++;
+    if (accuracyMode === 'word') {
+      const textWords = text.trim().split(/\s+/);
+      const inputWords = input.trim().split(/\s+/);
+      let correctWords = 0;
+      let totalWords = 0;
+      
+      // Compare each word
+      for (let i = 0; i < textWords.length; i++) {
+        totalWords++;
+        if (i < inputWords.length && textWords[i] === inputWords[i]) {
+          correctWords++;
+        }
+      }
+      
+      // Add any extra words typed as incorrect
+      if (inputWords.length > textWords.length) {
+        totalWords += (inputWords.length - textWords.length);
+      }
+      
+      return Math.round((correctWords / totalWords) * 100);
+    } else {
+      // Letter perfect mode
+      let correct = 0;
+      const minLength = Math.min(text.length, input.length);
+      
+      for (let i = 0; i < minLength; i++) {
+        if (text[i] === input[i]) correct++;
+      }
+      
+      return Math.round((correct / input.length) * 100);
     }
-    
-    return Math.round((correct / input.length) * 100);
-  }, []);
+  }, [accuracyMode]);
 
   // Handle test completion
   const handleTestComplete = useCallback(() => {
@@ -348,6 +372,7 @@ const App = () => {
       wpm: pendingScore.wpm || 0,
       accuracy: pendingScore.accuracy || 0,
       mode: selectedType,
+      accuracyMode: accuracyMode,
       date: new Date().toLocaleDateString(),
       time: selectedType === 'no-limit' ? elapsedTime : null,
       chars: totalChars || 0
@@ -361,7 +386,7 @@ const App = () => {
     localStorage.setItem('leaderboard', JSON.stringify(updatedLeaderboard));
     setShowNameInput(false);
     setPendingScore(null);
-  }, [playerName, pendingScore, selectedType, elapsedTime, leaderboard, totalChars]);
+  }, [playerName, pendingScore, selectedType, accuracyMode, elapsedTime, leaderboard, totalChars]);
 
   // Handle mode changes
   const handleModeChange = (newMode) => {
@@ -448,7 +473,9 @@ const App = () => {
                 )}
                 <span className="chars"> - {score?.chars || 0} chars</span>
               </span>
-              <span className="mode">{score?.mode || 'N/A'}</span>
+              <span className="mode">
+                {score?.mode || 'N/A'} ({score?.accuracyMode === 'word' ? 'Word Perfect' : 'Letter Perfect'})
+              </span>
               <span className="date">{score?.date || 'N/A'}</span>
             </div>
           ))}
@@ -456,6 +483,41 @@ const App = () => {
       </div>
     );
   };
+
+  // Render text with appropriate highlighting
+  const renderText = useCallback(() => {
+    if (accuracyMode === 'word') {
+      const textWords = currentText.split(/\s+/);
+      const inputWords = userInput.split(/\s+/);
+      
+      return textWords.map((word, wordIndex) => {
+        const isWordCorrect = wordIndex < inputWords.length && word === inputWords[wordIndex];
+        const isWordIncorrect = wordIndex < inputWords.length && word !== inputWords[wordIndex];
+        
+        return (
+          <span key={wordIndex} className={`word ${isWordCorrect ? 'correct' : isWordIncorrect ? 'incorrect' : ''}`}>
+            {word.split('').map((char, charIndex) => (
+              <span key={charIndex}>{char}</span>
+            ))}
+            {wordIndex < textWords.length - 1 && <span className="space"> </span>}
+          </span>
+        );
+      });
+    } else {
+      // Letter perfect mode
+      return currentText.split('').map((char, index) => {
+        let className = '';
+        if (index < userInput.length) {
+          className = userInput[index] === char ? 'correct' : 'incorrect';
+        }
+        return (
+          <span key={index} className={className}>
+            {char}
+          </span>
+        );
+      });
+    }
+  }, [currentText, userInput, accuracyMode]);
 
   return (
     <div className="App terminal-theme" style={{
@@ -532,6 +594,17 @@ const App = () => {
           </div>
 
           <div className="control-group">
+            <label>Accuracy Mode:</label>
+            <select 
+              value={accuracyMode} 
+              onChange={(e) => setAccuracyMode(e.target.value)}
+            >
+              <option value="word">Word Perfect</option>
+              <option value="letter">Letter Perfect</option>
+            </select>
+          </div>
+
+          <div className="control-group">
             <label>Theme:</label>
             <select value={theme} onChange={(e) => setTheme(e.target.value)}>
               {Object.keys(terminalThemes).map(themeName => (
@@ -547,17 +620,7 @@ const App = () => {
           ) : (
             <>
               <div className="text-display">
-                {currentText.split('').map((char, index) => {
-                  let className = '';
-                  if (index < userInput.length) {
-                    className = userInput[index] === char ? 'correct' : 'incorrect';
-                  }
-                  return (
-                    <span key={index} className={className}>
-                      {char}
-                    </span>
-                  );
-                })}
+                {renderText()}
               </div>
 
               <textarea
