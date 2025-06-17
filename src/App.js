@@ -29,8 +29,8 @@
 // Filename - App.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
-import { textCategories } from './textSamples';
 import { terminalThemes } from './terminalThemes';
+import { textCategories } from './textCategories';
 
 const App = () => {
   const [selectedType, setSelectedType] = useState('30s');
@@ -38,9 +38,16 @@ const App = () => {
   const [selectedLength, setSelectedLength] = useState('short');
   const [userInput, setUserInput] = useState('');
   const [currentText, setCurrentText] = useState(() => {
-    const category = textCategories[selectedLength][selectedCategory];
-    if (!category) return '';
-    return category[Math.floor(Math.random() * category.length)];
+    try {
+      const category = textCategories[selectedLength]?.[selectedCategory];
+      if (!category || !Array.isArray(category) || category.length === 0) {
+        return '';
+      }
+      return category[Math.floor(Math.random() * category.length)];
+    } catch (error) {
+      console.error('Error initializing text:', error);
+      return '';
+    }
   });
   const [time, setTime] = useState(() => {
     const timeValue = parseInt(selectedType);
@@ -49,10 +56,12 @@ const App = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
-  const [useCustomText, setUseCustomText] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState('');
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [totalWords, setTotalWords] = useState(0);
+  const [totalChars, setTotalChars] = useState(0);
   const [leaderboard, setLeaderboard] = useState(() => {
     const saved = localStorage.getItem('leaderboard');
     return saved ? JSON.parse(saved) : [];
@@ -61,6 +70,8 @@ const App = () => {
   const inputRef = useRef(null);
   const startTimeRef = useRef(null);
   const [pendingScore, setPendingScore] = useState(null);
+  const [isNoLimit, setIsNoLimit] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
 
   // Calculate WPM based on elapsed time
   const calculateWPM = useCallback((text, input, elapsedTime) => {
@@ -101,41 +112,17 @@ const App = () => {
     const newScore = {
       wpm: finalWpm,
       accuracy: finalAccuracy,
-      time: parseInt(selectedType),
+      time: selectedType === 'no-limit' ? elapsedTime : parseInt(selectedType),
       date: new Date().toLocaleDateString(),
       category: selectedCategory,
-      type: selectedType
+      type: selectedType,
+      words: totalWords,
+      chars: totalChars
     };
     
     // Store the score in state for later use
     setPendingScore(newScore);
-  }, [currentText, userInput, selectedCategory, selectedType, calculateWPM, calculateAccuracy]);
-
-  // Core timer logic
-  useEffect(() => {
-    let timerInterval;
-    
-    if (isRunning) {
-      const initialTime = parseInt(selectedType);
-      
-      timerInterval = setInterval(() => {
-        const elapsedTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        const remainingTime = Math.max(0, initialTime - elapsedTime);
-        
-        setTime(remainingTime);
-        
-        if (remainingTime <= 0) {
-          handleTestComplete();
-        }
-      }, 100); // Update more frequently for smoother countdown
-    }
-
-    return () => {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
-    };
-  }, [isRunning, selectedType, handleTestComplete]);
+  }, [currentText, userInput, selectedCategory, selectedType, calculateWPM, calculateAccuracy, totalWords, totalChars]);
 
   // Handle input changes and test progress
   const handleInputChange = useCallback((e) => {
@@ -145,25 +132,40 @@ const App = () => {
     // Start timer on first keystroke
     if (newInput.length === 1 && !isRunning) {
       startTimeRef.current = Date.now();
+      setElapsedTime(0);
+      setTotalWords(0);
+      setTotalChars(0);
       setIsRunning(true);
     }
 
     // Reset stats if input is cleared
     if (newInput.length === 0) {
-      setTime(parseInt(selectedType));
+      setElapsedTime(0);
       setWpm(0);
       setAccuracy(100);
+      setTotalWords(0);
+      setTotalChars(0);
       setIsRunning(false);
-      startTimeRef.current = null;
       return;
     }
 
     // Calculate current stats
-    const elapsedTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
-    const currentWpm = calculateWPM(currentText, newInput, elapsedTime);
+    const words = newInput.trim().split(/\s+/).length;
+    setTotalWords(words);
+    setTotalChars(newInput.length);
     const currentAccuracy = calculateAccuracy(currentText, newInput);
-    setWpm(currentWpm);
     setAccuracy(currentAccuracy);
+
+    if (selectedType === 'no-limit') {
+      const elapsedTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+      const timeInMinutes = elapsedTime / 60;
+      const currentWpm = Math.round(words / timeInMinutes);
+      setWpm(currentWpm);
+    } else {
+      const elapsedTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+      const currentWpm = calculateWPM(currentText, newInput, elapsedTime);
+      setWpm(currentWpm);
+    }
 
     // Check for test completion
     if (newInput === currentText) {
@@ -171,7 +173,34 @@ const App = () => {
     }
   }, [isRunning, currentText, selectedType, handleTestComplete, calculateWPM, calculateAccuracy]);
 
-  // Save leaderboard to localStorage
+  // Core timer logic
+  useEffect(() => {
+    let timerInterval;
+    
+    if (isRunning) {
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setElapsedTime(elapsed);
+        
+        if (selectedType !== 'no-limit') {
+          const remainingTime = Math.max(0, parseInt(selectedType) - elapsed);
+          setTime(remainingTime);
+          
+          if (remainingTime <= 0) {
+            handleTestComplete();
+          }
+        }
+      }, 100); // Update more frequently for smoother display
+    }
+
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [isRunning, selectedType, handleTestComplete]);
+
+  // Save leaderboards to localStorage
   useEffect(() => {
     localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
   }, [leaderboard]);
@@ -190,26 +219,39 @@ const App = () => {
     return () => mediaQuery.removeEventListener('change', handleThemeChange);
   }, []);
 
-  // Get random text function
+  // Get random text from selected category
   const getRandomText = useCallback(() => {
-    if (useCustomText) {
-      return currentText;
+    try {
+      const category = textCategories[selectedLength]?.[selectedCategory];
+      if (!category || !Array.isArray(category) || category.length === 0) {
+        console.error('Invalid category or empty category array');
+        return '';
+      }
+      return category[Math.floor(Math.random() * category.length)];
+    } catch (error) {
+      console.error('Error getting random text:', error);
+      return '';
     }
-    const category = textCategories[selectedLength][selectedCategory];
-    if (!category) return '';
-    return category[Math.floor(Math.random() * category.length)];
-  }, [selectedLength, selectedCategory, useCustomText, currentText]);
+  }, [selectedLength, selectedCategory]);
 
-  // Update text function
-  const updateText = useCallback(() => {
-    const newText = getRandomText();
-    setCurrentText(newText);
-  }, [getRandomText]);
-
-  // Initial text setup
+  // Update text when category or length changes
   useEffect(() => {
-    updateText();
-  }, [updateText]);
+    const newText = getRandomText();
+    if (newText) {
+      setCurrentText(newText);
+      setUserInput('');
+      setWpm(0);
+      setAccuracy(100);
+      setElapsedTime(0);
+      setTotalWords(0);
+      setTotalChars(0);
+      setIsRunning(false);
+      setShowSummary(false);
+      setShowNameInput(false);
+      setPendingScore(null);
+      setIsComplete(false);
+    }
+  }, [selectedCategory, selectedLength, getRandomText]);
 
   const selectedTheme = terminalThemes[theme];
 
@@ -282,92 +324,60 @@ const App = () => {
     </div>
   );
 
-  const renderLeaderboard = () => (
-    <div className="leaderboard">
-      <h2>Top Scores</h2>
-      {leaderboard.length > 0 ? (
-        <div className="leaderboard-entries">
-          {leaderboard.map((entry, index) => (
-            <div key={index} className="leaderboard-entry">
-              <div className="rank">#{index + 1}</div>
-              <div className="name">{entry.name || 'Anonymous'}</div>
-              <div className="score">
-                <span>{entry.wpm || 0} WPM</span>
-                <span>{entry.accuracy || 0}%</span>
-                <span>{entry.time || 0}s</span>
-              </div>
-              <div className="details">
-                {entry.category} - {entry.type}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="no-scores">No scores yet. Be the first to set a record!</div>
-      )}
-    </div>
-  );
-
   // Handle test reset
   const handleReset = useCallback(() => {
-    setUserInput('');
-    setTime(parseInt(selectedType));
     setIsRunning(false);
+    setUserInput('');
     setWpm(0);
     setAccuracy(100);
     setShowSummary(false);
     setShowNameInput(false);
     setPlayerName('');
-    startTimeRef.current = null;
-    updateText();
-  }, [selectedType, updateText]);
+    setElapsedTime(0);
+    setTotalWords(0);
+    setTotalChars(0);
+    getRandomText();
+  }, [getRandomText]);
 
   // Handle name submission
   const handleNameSubmit = useCallback(() => {
-    // Add the name to the pending score and update leaderboard
-    const scoreWithName = {
-      ...pendingScore,
+    if (!pendingScore) return;
+
+    const newScore = {
       name: playerName.trim() || 'Anonymous',
-      category: useCustomText ? 'Custom Text' : selectedCategory
+      wpm: pendingScore.wpm || 0,
+      accuracy: pendingScore.accuracy || 0,
+      mode: selectedType,
+      date: new Date().toLocaleDateString(),
+      time: selectedType === 'no-limit' ? elapsedTime : null,
+      chars: totalChars || 0
     };
     
-    setLeaderboard(prev => {
-      const newLeaderboard = [...prev, scoreWithName]
-        .sort((a, b) => b.wpm - a.wpm)
-        .slice(0, 10);
-      return newLeaderboard;
-    });
+    const updatedLeaderboard = [...(leaderboard || []), newScore]
+      .sort((a, b) => (b.wpm || 0) - (a.wpm || 0))
+      .slice(0, 10);
     
+    setLeaderboard(updatedLeaderboard);
+    localStorage.setItem('leaderboard', JSON.stringify(updatedLeaderboard));
     setShowNameInput(false);
-    handleReset();
-  }, [playerName, pendingScore, handleReset, useCustomText, selectedCategory]);
+    setPendingScore(null);
+  }, [playerName, pendingScore, selectedType, elapsedTime, leaderboard, totalChars]);
 
   // Handle mode changes
-  const handleModeChange = useCallback((type) => {
-    setSelectedType(type);
-    setTime(parseInt(type));
-    setIsRunning(false);
-    setUserInput('');
-    setWpm(0);
-    setAccuracy(100);
-    setShowSummary(false);
-    setShowNameInput(false);
-    setPlayerName('');
-    updateText();
-  }, [updateText]);
+  const handleModeChange = (newMode) => {
+    setSelectedType(newMode);
+    setTime(parseInt(newMode) || 0);
+    handleReset();
+  };
 
-  const handleCategoryChange = useCallback((category) => {
-    setSelectedCategory(category);
-    setTime(parseInt(selectedType));
-    setIsRunning(false);
-    setUserInput('');
-    setWpm(0);
-    setAccuracy(100);
-    setShowSummary(false);
-    setShowNameInput(false);
-    setPlayerName('');
-    updateText();
-  }, [selectedType, updateText]);
+  const handleCategoryChange = (newCategory) => {
+    if (newCategory === 'custom') {
+      setSelectedCategory('custom');
+    } else {
+      setSelectedCategory(newCategory);
+    }
+    handleReset();
+  };
 
   // Handle length change
   const handleLengthChange = useCallback((length) => {
@@ -380,8 +390,8 @@ const App = () => {
     setShowSummary(false);
     setShowNameInput(false);
     setPlayerName('');
-    updateText();
-  }, [selectedType, updateText]);
+    getRandomText();
+  }, [selectedType, getRandomText]);
 
   const handleFileUpload = useCallback((event) => {
     const file = event.target.files[0];
@@ -401,6 +411,51 @@ const App = () => {
       setCurrentText(pastedText);
     }
   }, []);
+
+  // Format time for display
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours > 0 ? `${hours}:` : ''}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Render leaderboard
+  const renderLeaderboard = () => {
+    if (!leaderboard || leaderboard.length === 0) {
+      return (
+        <div className="leaderboard">
+          <h3>Leaderboard</h3>
+          <div className="leaderboard-list">
+            <div className="no-scores">No scores yet. Complete a test to see your results here!</div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="leaderboard">
+        <h3>Leaderboard</h3>
+        <div className="leaderboard-list">
+          {leaderboard.map((score, index) => (
+            <div key={index} className="leaderboard-item">
+              <span className="rank">{index + 1}</span>
+              <span className="name">{score?.name || 'Anonymous'}</span>
+              <span className="score">
+                {score?.wpm || 0} WPM ({score?.accuracy || 0}%)
+                {score?.mode === 'no-limit' && score?.time && (
+                  <span className="time-taken"> - Time: {formatTime(score.time)}</span>
+                )}
+                <span className="chars"> - {score?.chars || 0} chars</span>
+              </span>
+              <span className="mode">{score?.mode || 'N/A'}</span>
+              <span className="date">{score?.date || 'N/A'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="App terminal-theme" style={{
@@ -426,30 +481,42 @@ const App = () => {
           <div className="control-group">
             <label>Category:</label>
             <select 
-              value={selectedCategory} 
+              value={selectedCategory === 'custom' ? 'custom' : selectedCategory} 
               onChange={(e) => handleCategoryChange(e.target.value)}
-              disabled={useCustomText}
-              className={useCustomText ? 'disabled' : ''}
             >
               <option value="shakespeare">Shakespeare</option>
               <option value="anime">Anime</option>
               <option value="aesop">Aesop's Fables</option>
+              <option value="custom">Custom Text</option>
             </select>
           </div>
 
-          <div className="control-group">
-            <label>Text Length:</label>
-            <select 
-              value={selectedLength} 
-              onChange={(e) => handleLengthChange(e.target.value)}
-              disabled={useCustomText}
-              className={useCustomText ? 'disabled' : ''}
-            >
-              <option value="short">Short</option>
-              <option value="medium">Medium</option>
-              <option value="long">Long</option>
-            </select>
-          </div>
+          {selectedCategory !== 'custom' ? (
+            <div className="control-group">
+              <label>Text Length:</label>
+              <select 
+                value={selectedLength} 
+                onChange={(e) => handleLengthChange(e.target.value)}
+              >
+                <option value="short">Short</option>
+                <option value="medium">Medium</option>
+                <option value="long">Long</option>
+              </select>
+            </div>
+          ) : (
+            <div className="control-group">
+              <label>Upload Text:</label>
+              <label className="file-upload-label">
+                <input
+                  type="file"
+                  accept=".txt,.md,.doc,.docx"
+                  onChange={handleFileUpload}
+                  disabled={isRunning}
+                />
+                Choose File
+              </label>
+            </div>
+          )}
 
           <div className="control-group">
             <label>Time Mode:</label>
@@ -460,6 +527,7 @@ const App = () => {
               <option value="30s">30 seconds</option>
               <option value="60s">60 seconds</option>
               <option value="90s">90 seconds</option>
+              <option value="no-limit">No Limit</option>
             </select>
           </div>
 
@@ -473,114 +541,53 @@ const App = () => {
           </div>
         </div>
 
-        <div className="custom-text-section">
-          <div className="custom-text-header">
-            <label>
-              <input
-                type="checkbox"
-                checked={useCustomText}
-                onChange={(e) => setUseCustomText(e.target.checked)}
-              />
-              Use Custom Text
-            </label>
-            {useCustomText && (
-              <div className="custom-text-actions">
-                <label className="file-upload-label">
-                  <input
-                    type="file"
-                    accept=".txt,.md,.doc,.docx"
-                    onChange={handleFileUpload}
-                    disabled={isRunning}
-                  />
-                  Upload Document
-                </label>
-                <button 
-                  className="clear-text-button"
-                  onClick={() => setCurrentText('')}
-                  disabled={isRunning}
-                >
-                  Clear Text
-                </button>
+        <div className="main-content">
+          {showSummary ? (
+            renderSummary()
+          ) : (
+            <>
+              <div className="text-display">
+                {currentText.split('').map((char, index) => {
+                  let className = '';
+                  if (index < userInput.length) {
+                    className = userInput[index] === char ? 'correct' : 'incorrect';
+                  }
+                  return (
+                    <span key={index} className={className}>
+                      {char}
+                    </span>
+                  );
+                })}
               </div>
-            )}
-          </div>
-          {useCustomText && (
-            <textarea
-              value={currentText}
-              onChange={(e) => setCurrentText(e.target.value)}
-              onPaste={handlePaste}
-              placeholder="Enter your custom text here or paste from a document..."
-              className="custom-text-input"
-              disabled={isRunning}
-            />
+
+              <textarea
+                ref={inputRef}
+                value={userInput}
+                onChange={handleInputChange}
+                placeholder="Start typing..."
+                disabled={isRunning && selectedType !== 'no-limit' && time <= 0}
+                className="typing-input"
+              />
+
+              <div className="stats">
+                <div className="stat">
+                  <span className="stat-label">WPM</span>
+                  <span className="stat-value">{wpm}</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Accuracy</span>
+                  <span className="stat-value">{accuracy}%</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Time</span>
+                  <span className="stat-value">
+                    {selectedType === 'no-limit' ? formatTime(elapsedTime) : time}
+                  </span>
+                </div>
+              </div>
+            </>
           )}
         </div>
-
-        {useCustomText ? (
-          <div className="text-display">
-            {currentText.split('').map((char, index) => {
-              let className = '';
-              if (index < userInput.length) {
-                className = userInput[index] === char ? 'correct' : 'incorrect';
-              }
-              return (
-                <span key={index} className={className}>
-                  {char}
-                </span>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-display">
-            {currentText.split('').map((char, index) => {
-              let className = '';
-              if (index < userInput.length) {
-                className = userInput[index] === char ? 'correct' : 'incorrect';
-              }
-              return (
-                <span key={index} className={className}>
-                  {char}
-                </span>
-              );
-            })}
-          </div>
-        )}
-
-        {!showSummary && (
-          <textarea
-            ref={inputRef}
-            value={userInput}
-            onChange={handleInputChange}
-            placeholder="Start typing..."
-            disabled={!currentText}
-            className="typing-input"
-          />
-        )}
-
-        {showSummary ? (
-          renderSummary()
-        ) : (
-          <div className="stats">
-            <div className="stat">
-              <div>Time</div>
-              <div>{time}s</div>
-            </div>
-            <div className="stat">
-              <div>WPM</div>
-              <div>{wpm}</div>
-            </div>
-            <div className="stat">
-              <div>Accuracy</div>
-              <div>{accuracy}%</div>
-            </div>
-          </div>
-        )}
-
-        {!showSummary && (
-          <button className="reset-button" onClick={handleReset}>
-            Reset
-          </button>
-        )}
 
         {renderLeaderboard()}
       </div>
