@@ -320,8 +320,9 @@
   word-wrap: break-word;
   min-height: 120px;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid var(--border-color);
+  scrollbar-gutter: stable;
 }
 
 .text-display .word {
@@ -342,7 +343,7 @@
 }
 
 .text-display .space {
-  display: inline-block;
+  display: inline-text;
   width: 4px;
 }
 
@@ -542,6 +543,8 @@ button:active {
 .leaderboard-list {
   max-height: 400px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
 }
 
 .leaderboard-item {
@@ -641,6 +644,7 @@ button:active {
   resize: vertical;
   margin-bottom: 30px;
   transition: border-color 0.3s ease;
+  scrollbar-gutter: stable;
 }
 
 .typing-input:focus {
@@ -954,6 +958,8 @@ button:active {
   z-index: 1000;
   backdrop-filter: blur(5px);
   animation: fadeIn 0.3s ease;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .pause-content {
@@ -1064,7 +1070,8 @@ button:active {
   flex-direction: column;
   justify-content: center;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .minimized-state::before {
@@ -1175,4 +1182,237 @@ button:active {
   color: var(--accent-color);
   font-style: italic;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-color);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 6px;
+  border: 2px solid var(--background-color);
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--correct-color);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--background-color);
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) var(--background-color);
+}
+
+/* Specific scrollbar styling for containers */
+.leaderboard-list {
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+}
+
+.leaderboard-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.leaderboard-list::-webkit-scrollbar-track {
+  background: var(--header-color);
+  border-radius: 5px;
+}
+
+.leaderboard-list::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 5px;
+  border: 1px solid var(--header-color);
+}
+
+.leaderboard-list::-webkit-scrollbar-thumb:hover {
+  background: var(--correct-color);
+}
+
+/* Text display scrollbar */
+.text-display {
+  font-family: 'Fira Code', monospace;
+  font-size: 1.4em;
+  line-height: 1.8;
+  margin-bottom: 30px;
+  padding: 25px;
+  background-color: var(--header-color);
+  border-radius: 8px;
+  color: var(--text-color);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 120px;
+  position: relative;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  scrollbar-gutter: stable;
+}
+
+.text-display::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.text-display::-webkit-scrollbar-track {
+  background: var(--header-color);
+  border-radius: 4px;
+}
+
+.text-display::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 4px;
+  border: 1px solid var(--header-color);
+}
+
+.text-display::-webkit-scrollbar-thumb:hover {
+  background: var(--correct-color);
+}
+
+/* Typing input scrollbar */
+.typing-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: 'Fira Code', monospace;
+  font-size: 1.3em;
+  line-height: 1.6;
+  resize: vertical;
+  margin-bottom: 30px;
+  transition: border-color 0.3s ease;
+  scrollbar-gutter: stable;
+}
+
+.typing-input::-webkit-scrollbar {
+  width: 10px;
+}
+
+.typing-input::-webkit-scrollbar-track {
+  background: var(--background-color);
+  border-radius: 5px;
+}
+
+.typing-input::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 5px;
+  border: 1px solid var(--background-color);
+}
+
+.typing-input::-webkit-scrollbar-thumb:hover {
+  background: var(--correct-color);
+}
+
+/* Maximized app scrollbar */
+.App.maximized .container {
+  height: calc(100vh - 40px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.App.maximized .container::-webkit-scrollbar {
+  width: 14px;
+}
+
+.App.maximized .container::-webkit-scrollbar-track {
+  background: var(--background-color);
+  border-radius: 7px;
+}
+
+.App.maximized .container::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 7px;
+  border: 2px solid var(--background-color);
+}
+
+.App.maximized .container::-webkit-scrollbar-thumb:hover {
+  background: var(--correct-color);
+}
+
+/* Pause screen scrollbar */
+.pause-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.pause-screen::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pause-screen::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pause-screen::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 235, 0.5);
+  border-radius: 4px;
+}
+
+.pause-screen::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 99, 235, 0.7);
+}
+
+/* Minimized state scrollbar */
+.minimized-state {
+  padding: 20px;
+  background: transparent;
+  border-radius: 0 0 8px 8px;
+  animation: slideUp 0.3s ease;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.minimized-state::-webkit-scrollbar {
+  width: 6px;
+}
+
+.minimized-state::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.minimized-state::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 235, 0.3);
+  border-radius: 3px;
+}
+
+.minimized-state::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 99, 235, 0.5);
 }
