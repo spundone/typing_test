@@ -27,7 +27,7 @@
 
 
 // Filename - App.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './App.css';
 import { terminalThemes } from './terminalThemes';
 import { textCategories } from './textCategories';
@@ -54,8 +54,13 @@ const App = () => {
     return timeValue;
   });
   const [isRunning, setIsRunning] = useState(false);
-  const [wpm, setWpm] = useState(0);
-  const [accuracy, setAccuracy] = useState(100);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(true);
+  const [isClosed, setIsClosed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [showSummary, setShowSummary] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState('');
@@ -73,14 +78,61 @@ const App = () => {
   const [isNoLimit, setIsNoLimit] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [accuracyMode, setAccuracyMode] = useState('word'); // 'word' or 'letter'
+  const [wpm, setWpm] = useState(0);
+  const [accuracy, setAccuracy] = useState(100);
+  const [pauseMessage, setPauseMessage] = useState('');
+  const [minimizePuzzle, setMinimizePuzzle] = useState('');
+  const [showPuzzle, setShowPuzzle] = useState(false);
+  const [puzzleAttempts, setPuzzleAttempts] = useState(0);
+
+  // Puzzle answers and hints
+  const puzzles = useMemo(() => [
+    {
+      question: "What do you call a typing test that's been minimized?",
+      answer: "minimized",
+      hint: "It's a state of being...",
+      messages: [
+        "A minimized typing test!",
+        "You found the secret!",
+        "The window was just playing hide and seek!",
+        "You're too smart for this puzzle!",
+        "The window was just taking a nap!"
+      ]
+    },
+    {
+      question: "What's the opposite of maximize?",
+      answer: "minimize",
+      hint: "Think small...",
+      messages: [
+        "You solved the puzzle!",
+        "The window was just being shy!",
+        "You found the secret word!",
+        "The window was playing peek-a-boo!",
+        "You're a puzzle master!"
+      ]
+    },
+    {
+      question: "What do you call a window that's not at full size?",
+      answer: "small",
+      hint: "It's a size...",
+      messages: [
+        "You got it!",
+        "The window was just feeling small!",
+        "You found the magic word!",
+        "The window was just being compact!",
+        "You're a word wizard!"
+      ]
+    }
+  ], []);
 
   // Calculate WPM based on elapsed time
   const calculateWPM = useCallback((text, input, elapsedTime) => {
     if (!text || !input || elapsedTime <= 0) return 0;
     
-    const words = text.trim().split(/\s+/).length;
+    // Count words typed (not words in original text)
+    const wordsTyped = input.trim().split(/\s+/).length;
     const timeInMinutes = elapsedTime / 60;
-    const wpm = Math.round((words / timeInMinutes) * (input.length / text.length));
+    const wpm = Math.round(wordsTyped / timeInMinutes);
     
     return isFinite(wpm) ? wpm : 0;
   }, []);
@@ -92,22 +144,17 @@ const App = () => {
       const textWords = text.trim().split(/\s+/);
       const inputWords = input.trim().split(/\s+/);
       let correctWords = 0;
-      let totalWords = 0;
+      let totalWordsTyped = inputWords.length;
       
-      // Compare each word
-      for (let i = 0; i < textWords.length; i++) {
-        totalWords++;
-        if (i < inputWords.length && textWords[i] === inputWords[i]) {
+      // Only count words that have been typed
+      for (let i = 0; i < Math.min(textWords.length, inputWords.length); i++) {
+        if (textWords[i] === inputWords[i]) {
           correctWords++;
         }
       }
       
-      // Add any extra words typed as incorrect
-      if (inputWords.length > textWords.length) {
-        totalWords += (inputWords.length - textWords.length);
-      }
-      
-      return Math.round((correctWords / totalWords) * 100);
+      // Don't penalize for words not yet typed
+      return totalWordsTyped > 0 ? Math.round((correctWords / totalWordsTyped) * 100) : 100;
     } else {
       // Letter perfect mode
       let correct = 0;
@@ -117,7 +164,7 @@ const App = () => {
         if (text[i] === input[i]) correct++;
       }
       
-      return Math.round((correct / input.length) * 100);
+      return input.length > 0 ? Math.round((correct / input.length) * 100) : 100;
     }
   }, [accuracyMode]);
 
@@ -148,66 +195,120 @@ const App = () => {
     setPendingScore(newScore);
   }, [currentText, userInput, selectedCategory, selectedType, calculateWPM, calculateAccuracy, totalWords, totalChars]);
 
-  // Handle input changes and test progress
-  const handleInputChange = useCallback((e) => {
-    const newInput = e.target.value;
-    setUserInput(newInput);
+  // Window management handlers
+  const handleMouseDown = useCallback((e) => {
+    if (e.target.closest('.terminal-controls')) return;
+    setIsDragging(true);
+    setDragOffset({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+  }, [position]);
 
-    // Start timer on first keystroke
-    if (newInput.length === 1 && !isRunning) {
+  const handleMouseMove = useCallback((e) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y
+      });
+    }
+  }, [isDragging, dragOffset]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleMinimizeClick = useCallback(() => {
+    if (!isMinimized) {
+      setIsMinimized(true);
+      if (isMaximized) setIsMaximized(false);
+      
+      // Start puzzle easter egg
+      const randomPuzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+      setMinimizePuzzle(randomPuzzle);
+      setShowPuzzle(true);
+      setPuzzleAttempts(0);
+    }
+  }, [isMinimized, isMaximized, puzzles]);
+
+  const handleMaximizeClick = useCallback(() => {
+    setIsMaximized(!isMaximized);
+    if (isMinimized) setIsMinimized(false);
+  }, [isMaximized, isMinimized]);
+
+  const handleCloseClick = useCallback(() => {
+    if (isMinimized) {
+      // If minimized, just restore the window
+      setIsMinimized(false);
+      return;
+    }
+    setIsClosed(true);
+  }, [isMinimized]);
+
+  // Pause/Resume functionality
+  const handlePauseClick = useCallback(() => {
+    if (isRunning) {
+      setIsPaused(!isPaused);
+      if (!isPaused) {
+        // Pause the timer
+        if (startTimeRef.current) {
+          clearInterval(startTimeRef.current);
+          startTimeRef.current = null;
+        }
+      } else {
+        // Resume the timer
+        startTimeRef.current = Date.now();
+      }
+    }
+  }, [isRunning, isPaused]);
+
+  // Update handleInputChange to respect pause state
+  const handleInputChange = useCallback((e) => {
+    if (!isRunning && !isPaused) {
+      setIsRunning(true);
       startTimeRef.current = Date.now();
       setElapsedTime(0);
       setTotalWords(0);
       setTotalChars(0);
-      setIsRunning(true);
     }
-
-    // Reset stats if input is cleared
-    if (newInput.length === 0) {
-      setElapsedTime(0);
-      setWpm(0);
-      setAccuracy(100);
-      setTotalWords(0);
-      setTotalChars(0);
-      setIsRunning(false);
-      return;
-    }
-
-    // Calculate current stats
-    const words = newInput.trim().split(/\s+/).length;
-    setTotalWords(words);
-    setTotalChars(newInput.length);
-    const currentAccuracy = calculateAccuracy(currentText, newInput);
-    setAccuracy(currentAccuracy);
-
-    if (selectedType === 'no-limit') {
-      const elapsedTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
-      const timeInMinutes = elapsedTime / 60;
-      const currentWpm = Math.round(words / timeInMinutes);
-      setWpm(currentWpm);
-    } else {
-      const elapsedTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
-      const currentWpm = calculateWPM(currentText, newInput, elapsedTime);
-      setWpm(currentWpm);
-    }
-
-    // Check for test completion
-    if (newInput === currentText) {
+    
+    if (isPaused) return; // Don't process input while paused
+    
+    const value = e.target.value;
+    setUserInput(value);
+    
+    // Calculate WPM properly
+    const words = value.trim().split(/\s+/).length;
+    const currentElapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+    const minutes = currentElapsed / 60; // Convert seconds to minutes
+    const newWpm = minutes > 0 ? Math.round(words / minutes) : 0;
+    setWpm(newWpm);
+    
+    // Calculate accuracy
+    const newAccuracy = calculateAccuracy(currentText, value);
+    setAccuracy(newAccuracy);
+    
+    // Calculate total characters
+    const newTotalChars = value.length;
+    setTotalChars(newTotalChars);
+    
+    // Check if test is complete
+    if (value.length >= currentText.length) {
       handleTestComplete();
     }
-  }, [isRunning, currentText, selectedType, handleTestComplete, calculateWPM, calculateAccuracy]);
+  }, [isRunning, isPaused, currentText, calculateAccuracy, handleTestComplete]);
 
   // Core timer logic
   useEffect(() => {
     let timerInterval;
     
-    if (isRunning) {
+    if (isRunning && !isPaused) {
       timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        setElapsedTime(elapsed);
+        const currentElapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setElapsedTime(currentElapsed);
         
         if (selectedType !== 'no-limit') {
-          const remainingTime = Math.max(0, parseInt(selectedType) - elapsed);
+          const remainingTime = Math.max(0, parseInt(selectedType) - currentElapsed);
           setTime(remainingTime);
           
           if (remainingTime <= 0) {
@@ -222,7 +323,7 @@ const App = () => {
         clearInterval(timerInterval);
       }
     };
-  }, [isRunning, selectedType, handleTestComplete]);
+  }, [isRunning, isPaused, selectedType, handleTestComplete]);
 
   // Save leaderboards to localStorage
   useEffect(() => {
@@ -279,39 +380,84 @@ const App = () => {
 
   const selectedTheme = terminalThemes[theme];
 
-  // Add easter egg functions
-  const handleCloseClick = () => {
-    const messages = [
-      "Are you sure you want to close? Your progress will be lost!",
-      "Don't close me! I'm having fun!",
-      "You can't close me! I'm a React app!",
-      "Nice try, but I'm not going anywhere!",
-      "Closing is not an option in the world of typing tests!"
-    ];
-    alert(messages[Math.floor(Math.random() * messages.length)]);
-  };
+  // Add fun easter egg for typing speed
+  useEffect(() => {
+    if (wpm > 100) {
+      const messages = [
+        "Wow! You're typing at lightning speed! ⚡",
+        "100+ WPM! Are you a robot? 🤖",
+        "Incredible speed! Your keyboard is on fire! 🔥",
+        "You're typing faster than I can think!",
+        "100+ WPM! The keyboard is your dance floor! 💃"
+      ];
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      console.log(randomMessage);
+    }
+  }, [wpm]);
 
-  const handleMinimizeClick = () => {
-    const messages = [
-      "I'm already as small as I can be!",
-      "Minimizing a web app? That's a new one!",
-      "You can't minimize me, I'm not a real window!",
-      "I'm already running in your browser tab!",
-      "Try using your browser's minimize button instead!"
-    ];
-    alert(messages[Math.floor(Math.random() * messages.length)]);
-  };
+  // Add fun easter egg for accuracy
+  useEffect(() => {
+    if (accuracy === 100 && totalChars > 50) {
+      const messages = [
+        "Perfect accuracy! You're a typing ninja! 🥷",
+        "100% accuracy! Not a single mistake! 🎯",
+        "Flawless typing! Your keyboard is proud! ⌨️",
+        "Perfect score! Are you even human? 👽",
+        "100% accuracy! The keyboard bows to you! 🙇"
+      ];
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      console.log(randomMessage);
+    }
+  }, [accuracy, totalChars]);
 
-  const handleMaximizeClick = () => {
-    const messages = [
-      "I'm already at maximum typing power!",
-      "Maximum typing speed achieved!",
-      "You've unlocked the secret typing dimension!",
-      "The terminal is now at maximum capacity!",
-      "Be careful, too much typing power might break the internet!"
-    ];
-    alert(messages[Math.floor(Math.random() * messages.length)]);
-  };
+  // Add fun easter egg for consecutive tests
+  useEffect(() => {
+    const testCount = localStorage.getItem('testCount') || 0;
+    if (testCount > 5) {
+      const messages = [
+        "You're really getting into this! 🎮",
+        "5+ tests! You're a typing machine! 🤖",
+        "Keep going! You're on fire! 🔥",
+        "Your keyboard is getting a workout! 💪",
+        "You're becoming one with the keyboard! ⌨️"
+      ];
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      console.log(randomMessage);
+    }
+    localStorage.setItem('testCount', Number(testCount) + 1);
+  }, [showSummary]);
+
+  // Handle window focus/blur
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isRunning && !isPaused) {
+        setIsPaused(true);
+        if (startTimeRef.current) {
+          clearInterval(startTimeRef.current);
+          startTimeRef.current = null;
+        }
+        
+        // Easter egg: Random fun message when pausing
+        const messages = [
+          "Hey! Where are you going? 🏃",
+          "Don't leave me hanging! 🤔",
+          "The keyboard misses you already! ⌨️",
+          "Your fingers are getting cold! 🥶",
+          "The words are waiting for you! 📝",
+          "Paused for a coffee break? ☕",
+          "Taking a typing vacation? 🏖️",
+          "The keyboard is getting lonely! 😢",
+          "Your typing skills are too good to pause! 💪",
+          "The words are getting impatient! ⏰"
+        ];
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        setPauseMessage(randomMessage);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRunning, isPaused]);
 
   const renderSummary = () => (
     <div className="summary-screen">
@@ -345,6 +491,9 @@ const App = () => {
         <button onClick={() => setShowNameInput(true)}>Save Score</button>
       )}
       <button onClick={handleReset}>Try Again</button>
+      
+      {/* Show leaderboard in summary */}
+      {renderLeaderboard()}
     </div>
   );
 
@@ -386,6 +535,9 @@ const App = () => {
     localStorage.setItem('leaderboard', JSON.stringify(updatedLeaderboard));
     setShowNameInput(false);
     setPendingScore(null);
+    
+    // Show success message
+    alert(`Score saved! Your ${newScore.wpm} WPM with ${newScore.accuracy}% accuracy has been added to the leaderboard.`);
   }, [playerName, pendingScore, selectedType, accuracyMode, elapsedTime, leaderboard, totalChars]);
 
   // Handle mode changes
@@ -427,13 +579,6 @@ const App = () => {
         setCurrentText(text);
       };
       reader.readAsText(file);
-    }
-  }, []);
-
-  const handlePaste = useCallback((event) => {
-    const pastedText = event.clipboardData.getData('text');
-    if (pastedText) {
-      setCurrentText(pastedText);
     }
   }, []);
 
@@ -519,141 +664,261 @@ const App = () => {
     }
   }, [currentText, userInput, accuracyMode]);
 
+  // Add keyboard shortcut for pause (Esc key)
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 'Escape' && isRunning) {
+        handlePauseClick();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isRunning, handlePauseClick]);
+
+  // Render pause screen
+  const renderPauseScreen = () => (
+    <div className="pause-screen">
+      <div className="pause-content">
+        <h2>Paused</h2>
+        <p className="pause-message">{pauseMessage}</p>
+        <div className="pause-stats">
+          <div className="stat">
+            <span className="stat-label">Current WPM</span>
+            <span className="stat-value">{wpm}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Accuracy</span>
+            <span className="stat-value">{accuracy}%</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Time</span>
+            <span className="stat-value">{formatTime(elapsedTime)}</span>
+          </div>
+        </div>
+        <button 
+          className="resume-button"
+          onClick={() => {
+            setIsPaused(false);
+            startTimeRef.current = Date.now();
+          }}
+        >
+          Resume Typing
+        </button>
+      </div>
+    </div>
+  );
+
+  const handlePuzzleSubmit = useCallback((e) => {
+    e.preventDefault();
+    setPuzzleAttempts(prev => prev + 1);
+    
+    if (e.target.puzzleAnswer.value.toLowerCase() === minimizePuzzle.answer) {
+      // Correct answer
+      const randomMessage = minimizePuzzle.messages[Math.floor(Math.random() * minimizePuzzle.messages.length)];
+      alert(randomMessage);
+      setIsMinimized(false);
+      setShowPuzzle(false);
+    } else {
+      // Wrong answer
+      if (puzzleAttempts >= 2) {
+        alert(`Hint: ${minimizePuzzle.hint}`);
+      } else {
+        alert("That's not quite right. Try again!");
+      }
+    }
+    e.target.puzzleAnswer.value = '';
+  }, [minimizePuzzle, puzzleAttempts]);
+
+  // Render minimized state with puzzle
+  const renderMinimizedState = () => (
+    <div className="minimized-state">
+      <div className="minimized-content">
+        <h3>Window Minimized</h3>
+        {showPuzzle && (
+          <div className="puzzle-container">
+            <p className="puzzle-question">{minimizePuzzle.question}</p>
+            <form onSubmit={handlePuzzleSubmit} className="puzzle-form">
+              <input
+                type="text"
+                name="puzzleAnswer"
+                placeholder="Type your answer..."
+                className="puzzle-input"
+                autoComplete="off"
+              />
+              <button type="submit" className="puzzle-submit">
+                Submit
+              </button>
+            </form>
+            <p className="puzzle-attempts">
+              Attempts: {puzzleAttempts}
+              {puzzleAttempts >= 2 && (
+                <span className="puzzle-hint">Hint: {minimizePuzzle.hint}</span>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="App terminal-theme" style={{
-      '--background-color': selectedTheme?.background || '#1a1a1a',
-      '--text-color': selectedTheme?.text || '#ffffff',
-      '--accent-color': selectedTheme?.accent || '#2563eb',
-      '--correct-color': selectedTheme?.correct || '#2563eb',
-      '--incorrect-color': selectedTheme?.incorrect || '#ff0000',
-      '--header-color': selectedTheme?.header || '#2a2a2a',
-      '--border-color': selectedTheme?.border || '#3a3a3a'
-    }}>
-      <div className="terminal-header">
+    <div 
+      className={`App terminal-theme ${isMinimized ? 'minimized' : ''} ${isMaximized ? 'maximized' : ''}`}
+      style={{
+        '--background-color': selectedTheme?.background || '#1a1a1a',
+        '--text-color': selectedTheme?.text || '#ffffff',
+        '--accent-color': selectedTheme?.accent || '#2563eb',
+        '--correct-color': selectedTheme?.correct || '#2563eb',
+        '--incorrect-color': selectedTheme?.incorrect || '#ff0000',
+        '--header-color': selectedTheme?.header || '#2a2a2a',
+        '--border-color': selectedTheme?.border || '#3a3a3a',
+        transform: isDragging && !isMinimized ? 'none' : `translate(${position.x}px, ${position.y}px)`,
+        cursor: isDragging ? 'grabbing' : 'default'
+      }}
+    >
+      <div 
+        className="terminal-header"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
         <div className="terminal-controls">
           <div className="terminal-control close" onClick={handleCloseClick}></div>
           <div className="terminal-control minimize" onClick={handleMinimizeClick}></div>
           <div className="terminal-control maximize" onClick={handleMaximizeClick}></div>
+          {isRunning && (
+            <div className="terminal-control pause" onClick={handlePauseClick}>
+              {isPaused ? '▶' : '⏸'}
+            </div>
+          )}
         </div>
         <div className="terminal-title">Hyperwebster: Inf-Typer</div>
       </div>
 
-      <div className="container">
-        <div className="controls">
-          <div className="control-group">
-            <label>Category:</label>
-            <select 
-              value={selectedCategory === 'custom' ? 'custom' : selectedCategory} 
-              onChange={(e) => handleCategoryChange(e.target.value)}
-            >
-              <option value="shakespeare">Shakespeare</option>
-              <option value="anime">Anime</option>
-              <option value="aesop">Aesop's Fables</option>
-              <option value="custom">Custom Text</option>
-            </select>
-          </div>
-
-          {selectedCategory !== 'custom' ? (
-            <div className="control-group">
-              <label>Text Length:</label>
-              <select 
-                value={selectedLength} 
-                onChange={(e) => handleLengthChange(e.target.value)}
-              >
-                <option value="short">Short</option>
-                <option value="medium">Medium</option>
-                <option value="long">Long</option>
-              </select>
-            </div>
-          ) : (
-            <div className="control-group">
-              <label>Upload Text:</label>
-              <label className="file-upload-label">
-                <input
-                  type="file"
-                  accept=".txt,.md,.doc,.docx"
-                  onChange={handleFileUpload}
-                  disabled={isRunning}
-                />
-                Choose File
-              </label>
-            </div>
-          )}
-
-          <div className="control-group">
-            <label>Time Mode:</label>
-            <select 
-              value={selectedType} 
-              onChange={(e) => handleModeChange(e.target.value)}
-            >
-              <option value="30s">30 seconds</option>
-              <option value="60s">60 seconds</option>
-              <option value="90s">90 seconds</option>
-              <option value="no-limit">No Limit</option>
-            </select>
-          </div>
-
-          <div className="control-group">
-            <label>Accuracy Mode:</label>
-            <select 
-              value={accuracyMode} 
-              onChange={(e) => setAccuracyMode(e.target.value)}
-            >
-              <option value="word">Word Perfect</option>
-              <option value="letter">Letter Perfect</option>
-            </select>
-          </div>
-
-          <div className="control-group">
-            <label>Theme:</label>
-            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
-              {Object.keys(terminalThemes).map(themeName => (
-                <option key={themeName} value={themeName}>{themeName}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="main-content">
-          {showSummary ? (
+      {!isClosed && (
+        <div className="container">
+          {isMinimized ? (
+            renderMinimizedState()
+          ) : showSummary ? (
             renderSummary()
+          ) : isPaused ? (
+            renderPauseScreen()
           ) : (
             <>
-              <div className="text-display">
-                {renderText()}
+              <div className="controls">
+                <div className="control-group">
+                  <label>Category:</label>
+                  <select 
+                    value={selectedCategory === 'custom' ? 'custom' : selectedCategory} 
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                  >
+                    <option value="shakespeare">Shakespeare</option>
+                    <option value="anime">Anime</option>
+                    <option value="aesop">Aesop's Fables</option>
+                    <option value="custom">Custom Text</option>
+                  </select>
+                </div>
+
+                {selectedCategory !== 'custom' ? (
+                  <div className="control-group">
+                    <label>Text Length:</label>
+                    <select 
+                      value={selectedLength} 
+                      onChange={(e) => handleLengthChange(e.target.value)}
+                    >
+                      <option value="short">Short</option>
+                      <option value="medium">Medium</option>
+                      <option value="long">Long</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="control-group">
+                    <label>Upload Text:</label>
+                    <label className="file-upload-label">
+                      <input
+                        type="file"
+                        accept=".txt,.md,.doc,.docx"
+                        onChange={handleFileUpload}
+                        disabled={isRunning}
+                      />
+                      Choose File
+                    </label>
+                  </div>
+                )}
+
+                <div className="control-group">
+                  <label>Time Mode:</label>
+                  <select 
+                    value={selectedType} 
+                    onChange={(e) => handleModeChange(e.target.value)}
+                  >
+                    <option value="30s">30 seconds</option>
+                    <option value="60s">60 seconds</option>
+                    <option value="90s">90 seconds</option>
+                    <option value="no-limit">No Limit</option>
+                  </select>
+                </div>
+
+                <div className="control-group">
+                  <label>Accuracy Mode:</label>
+                  <select 
+                    value={accuracyMode} 
+                    onChange={(e) => setAccuracyMode(e.target.value)}
+                  >
+                    <option value="word">Word Perfect</option>
+                    <option value="letter">Letter Perfect</option>
+                  </select>
+                </div>
+
+                <div className="control-group">
+                  <label>Theme:</label>
+                  <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+                    {Object.keys(terminalThemes).map(themeName => (
+                      <option key={themeName} value={themeName}>{themeName}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <textarea
-                ref={inputRef}
-                value={userInput}
-                onChange={handleInputChange}
-                placeholder="Start typing..."
-                disabled={isRunning && selectedType !== 'no-limit' && time <= 0}
-                className="typing-input"
-              />
+              <div className="main-content">
+                <div className="text-display" style={{ color: 'var(--text-color)' }}>
+                  {renderText()}
+                </div>
 
-              <div className="stats">
-                <div className="stat">
-                  <span className="stat-label">WPM</span>
-                  <span className="stat-value">{wpm}</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">Accuracy</span>
-                  <span className="stat-value">{accuracy}%</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">Time</span>
-                  <span className="stat-value">
-                    {selectedType === 'no-limit' ? formatTime(elapsedTime) : time}
-                  </span>
+                <textarea
+                  ref={inputRef}
+                  value={userInput}
+                  onChange={handleInputChange}
+                  placeholder="Start typing..."
+                  disabled={isRunning && selectedType !== 'no-limit' && time <= 0}
+                  className="typing-input"
+                />
+
+                <div className="stats">
+                  <div className="stat">
+                    <span className="stat-label">WPM</span>
+                    <span className="stat-value">{wpm}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Accuracy</span>
+                    <span className="stat-value">{accuracy}%</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Time</span>
+                    <span className="stat-value">
+                      {selectedType === 'no-limit' ? formatTime(elapsedTime) : time}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {renderLeaderboard()}
             </>
           )}
         </div>
-
-        {renderLeaderboard()}
-      </div>
+      )}
     </div>
   );
 }
