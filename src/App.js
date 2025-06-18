@@ -33,26 +33,24 @@ import { terminalThemes } from './terminalThemes';
 import { textCategories } from './textCategories';
 
 const App = () => {
-  const [selectedType, setSelectedType] = useState('30s');
+  const [selectedType, setSelectedType] = useState('60s');
   const [selectedCategory, setSelectedCategory] = useState('shakespeare');
-  const [selectedLength, setSelectedLength] = useState('short');
+  const [selectedLength, setSelectedLength] = useState('medium');
   const [userInput, setUserInput] = useState('');
   const [currentText, setCurrentText] = useState(() => {
     try {
-      const category = textCategories[selectedLength]?.[selectedCategory];
+      const category = textCategories['medium']?.['shakespeare'];
       if (!category || !Array.isArray(category) || category.length === 0) {
+        console.error('Invalid category or empty category array');
         return '';
       }
       return category[Math.floor(Math.random() * category.length)];
     } catch (error) {
-      console.error('Error initializing text:', error);
+      console.error('Error getting random text:', error);
       return '';
     }
   });
-  const [time, setTime] = useState(() => {
-    const timeValue = parseInt(selectedType);
-    return timeValue;
-  });
+  const [time, setTime] = useState(60);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -75,15 +73,13 @@ const App = () => {
   const inputRef = useRef(null);
   const startTimeRef = useRef(null);
   const [pendingScore, setPendingScore] = useState(null);
-  const [isNoLimit, setIsNoLimit] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [accuracyMode, setAccuracyMode] = useState('word'); // 'word' or 'letter'
-  const [wpm, setWpm] = useState(0);
-  const [accuracy, setAccuracy] = useState(100);
-  const [pauseMessage, setPauseMessage] = useState('');
   const [minimizePuzzle, setMinimizePuzzle] = useState('');
   const [showPuzzle, setShowPuzzle] = useState(false);
   const [puzzleAttempts, setPuzzleAttempts] = useState(0);
+  const [accuracyMode, setAccuracyMode] = useState('word');
+  const [wpm, setWpm] = useState(0);
+  const [accuracy, setAccuracy] = useState(100);
+  const [pauseMessage, setPauseMessage] = useState('');
 
   // Puzzle answers and hints
   const puzzles = useMemo(() => [
@@ -374,7 +370,8 @@ const App = () => {
       setShowSummary(false);
       setShowNameInput(false);
       setPendingScore(null);
-      setIsComplete(false);
+      setShowPuzzle(false);
+      setPuzzleAttempts(0);
     }
   }, [selectedCategory, selectedLength, getRandomText]);
 
